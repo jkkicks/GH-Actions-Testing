@@ -22,8 +22,8 @@ This document tracks what has been implemented from the [CI-CD Example](./CI-CD%
 | GitHub Environments | ✅ Implemented | `staging` environment configured |
 | Concurrency Control | ✅ Implemented | Cancel in-progress runs |
 | SARIF Upload | ✅ Implemented | Security results in GitHub Security tab |
-| Release Please | ❌ Not Implemented | Automated versioning |
-| Production Deployment | ❌ Not Implemented | Tag-triggered prod deploy |
+| Release Please | ✅ Implemented | `.github/workflows/release-please.yml` |
+| Production Deployment | ✅ Implemented | `.github/workflows/production-deploy.yml` |
 
 ---
 
@@ -132,27 +132,50 @@ This document tracks what has been implemented from the [CI-CD Example](./CI-CD%
 
 ---
 
-## Not Yet Implemented
+### 5. Release Please Workflow
 
-### Release Please
+**File:** `.github/workflows/release-please.yml`
 
-**What's needed:**
-- Add `.github/workflows/release-please.yml`
-- Configure for conventional commits
-- Update `package.json` version on release
+**Trigger:** Push to `main` or `master`
 
-**Purpose:** Automated changelog and version management.
+**What it does:**
+- Tracks commits using [Conventional Commits](https://www.conventionalcommits.org/) format
+- Automatically opens a Release PR that updates:
+  - `CHANGELOG.md` with commit history
+  - `package.json` version
+- When the Release PR is merged, creates a GitHub Release with a tag (e.g., `v1.2.0`)
+
+**Commit format examples:**
+| Commit Message | Version Bump |
+|---------------|--------------|
+| `feat: add user auth` | Minor (1.0.0 → 1.1.0) |
+| `fix: resolve login bug` | Patch (1.1.0 → 1.1.1) |
+| `feat!: breaking change` | Major (1.1.1 → 2.0.0) |
+| `chore: update deps` | No release |
+
+**From Plan:** Section 3 - Production Release
 
 ---
 
-### Production Deployment (Tag-triggered)
+### 6. Production Deployment Workflow
 
-**What's needed:**
-- Add workflow triggered by release tags (e.g., `v1.2.0`)
-- Retag existing SHA image with version tag
-- Deploy to production environment
+**File:** `.github/workflows/production-deploy.yml`
 
-**Purpose:** Promote staging to production via semantic versioning.
+**Trigger:** GitHub Release published (created by Release Please)
+
+**Jobs:**
+
+#### Promote Image
+- Pulls the `latest` image from GHCR (already tested in staging)
+- Retags it with the release version (e.g., `v1.2.0`)
+- Pushes the version-tagged image to GHCR
+
+#### Deploy to Production
+- Uses GitHub Environment `production`
+- Placeholder for actual deployment (infra repo update)
+- Reports deployment status on the release
+
+**From Plan:** Section 3 - Production Release
 
 ---
 
@@ -162,7 +185,9 @@ This document tracks what has been implemented from the [CI-CD Example](./CI-CD%
 .github/
 └── workflows/
     ├── lint-typecheck.yml    # PR checks (quality, migrations, security)
-    └── docker-build.yml      # Build, scan, and deploy on merge
+    ├── docker-build.yml      # Build, scan, and deploy to staging
+    ├── release-please.yml    # Automated versioning and changelog
+    └── production-deploy.yml # Tag-triggered production deployment
 
 drizzle/
 ├── meta/
@@ -184,32 +209,52 @@ CI-CD Example                # Original plan document
 
 ## GitHub Repository Configuration
 
-To complete the setup, configure these in your GitHub repository settings:
-
 ### Environments (Settings > Environments)
-1. Create `staging` environment
-   - Optional: Add required reviewers
-   - Optional: Add deployment branch rules
 
-2. Create `production` environment (when ready)
-   - Recommended: Add required reviewers
-   - Recommended: Restrict to `main` branch only
+#### Staging Environment
+
+**Status:** ✅ Created
+
+**Recommended Settings:**
+
+| Setting | Recommendation | Why |
+|---------|---------------|-----|
+| **Required reviewers** | Optional (0-1) | Staging is for testing; too much friction slows iteration |
+| **Wait timer** | None (0 minutes) | Deploy immediately for fast feedback |
+| **Deployment branches** | `main` only | Prevents deploying random branches to staging |
+| **Environment secrets** | Usually not needed | Runtime secrets are managed by Ansible on the host, not GitHub Actions |
+| **Environment variables** | Usually not needed | Config is in infra repo docker-compose files |
+
+#### Production Environment (when ready)
+
+**Status:** ❌ Not created
+
+**Recommended Settings:**
+
+| Setting | Recommendation | Why |
+|---------|---------------|-----|
+| **Required reviewers** | 1-2 reviewers | Human approval before prod deploy |
+| **Wait timer** | Optional (5-15 min) | Cool-down period to catch issues |
+| **Deployment branches** | `main` only | Only deploy tested code |
+| **Environment secrets** | Required | Production credentials |
 
 ### Branch Protection (Settings > Branches)
+
 Recommended rules for `main`:
-- Require pull request reviews
-- Require status checks to pass:
-  - `Quality Checks`
-  - `Migration Verification`
-  - `Security Scan`
-- Require branches to be up to date
+
+| Rule | Recommendation |
+|------|---------------|
+| Require pull request reviews | ✅ Enable (1 reviewer minimum) |
+| Require status checks to pass | ✅ Enable |
+| Required checks | `Quality Checks`, `Migration Verification`, `Security Scan` |
+| Require branches to be up to date | ✅ Enable |
+| Include administrators | Optional (enforce rules for everyone) |
 
 ---
 
 ## Next Steps
 
-1. Create GitHub Environments in repo settings
-2. Add Release Please workflow for automated versioning
-3. Add production deployment workflow triggered by tags
-4. Configure branch protection rules
-5. Set up actual deployment mechanism (infra repo updates, webhooks, etc.)
+1. Create `production` GitHub Environment in repo settings
+2. Configure branch protection rules for `main`
+3. Set up actual deployment mechanism (infra repo updates, webhooks, etc.)
+4. Start using Conventional Commits to trigger releases
