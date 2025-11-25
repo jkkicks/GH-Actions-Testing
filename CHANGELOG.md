@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/jkkicks/GH-Actions-Testing/compare/v1.1.1...v1.2.0) (2025-11-25)
+
+
+### Features
+
+* enhance database schema by adding users table ([93bbe33](https://github.com/jkkicks/GH-Actions-Testing/commit/93bbe33e0c1f6c84aac8f2bac65ef11635db9c85))
+
 ## [1.1.1](https://github.com/jkkicks/GH-Actions-Testing/compare/v1.1.0...v1.1.1) (2025-11-25)
 
 
