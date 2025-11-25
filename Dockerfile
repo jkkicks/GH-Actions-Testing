@@ -65,6 +65,9 @@ COPY --from=builder --chown=nodejs:nodejs /app/public ./public
 COPY --from=builder --chown=nodejs:nodejs /app/app/lib/db ./app/lib/db
 COPY --from=builder --chown=nodejs:nodejs /app/drizzle.config.ts ./drizzle.config.ts
 
+# Copy migration files for runtime execution
+COPY --from=builder --chown=nodejs:nodejs /app/drizzle ./drizzle
+
 # Switch to non-root user
 USER nodejs
 
@@ -82,6 +85,6 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })"
 
-# Start the application with signal handling
+# Start the application with signal handling (prestart script runs migrations)
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "start"]

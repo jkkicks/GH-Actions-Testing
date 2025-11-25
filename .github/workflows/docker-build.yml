@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Deploy
 
 on:
   push:
@@ -7,16 +7,26 @@ on:
       - master
   workflow_dispatch:
 
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push:
+    name: Build & Push
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      sha_tag: sha-${{ github.sha }}
 
     steps:
       - name: Checkout repository
@@ -51,7 +61,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
       - name: Make package public
         run: |
@@ -62,6 +72,68 @@ jobs:
             https://api.github.com/user/packages/container/$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')/visibility \
             -d '{"visibility":"public"}' || true
 
+  security-scan:
+    name: Security Scan (Image)
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [build-and-push, security-scan]
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.com
+
+    steps:
+      - name: Deploy notification
+        run: |
+          echo "## Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.sha_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ready for DOCO-CD to pick up the new image tag." >> $GITHUB_STEP_SUMMARY
+
+      # TODO: Add actual deployment steps here
+      # This could be updating an infra repo, calling a webhook, etc.
+      - name: Placeholder - Update infra repo
+        run: |
+          echo "In production, this step would update staging/docker-compose.yml in the infra repo"
+          echo "with the new image tag: ${{ needs.build-and-push.outputs.sha_tag }}"
+
+  summary:
+    name: Build Summary
+    needs: [build-and-push, security-scan, deploy-staging]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
       - name: Generate summary
         run: |
           echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
@@ -69,4 +141,8 @@ jobs:
           echo "**Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" | sed 's/,/\n/g' | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
+          echo "- latest" >> $GITHUB_STEP_SUMMARY
+          echo "- ${{ needs.build-and-push.outputs.sha_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Security Scan:** Completed" >> $GITHUB_STEP_SUMMARY
+          echo "**Staging Deploy:** ${{ needs.deploy-staging.result }}" >> $GITHUB_STEP_SUMMARY
