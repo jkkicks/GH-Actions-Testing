@@ -1,0 +1,6 @@
+node_modules
+build
+.cache
+.env
+.env.local
+package_copy.json
