@@ -34,7 +34,9 @@ jobs:
 
       - name: Set image name to lowercase
         id: image-name
-        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+        run: |
+          REPO="${{ github.repository }}"
+          echo "name=${REPO,,}" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
