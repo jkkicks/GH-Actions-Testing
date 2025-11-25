@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/jkkicks/GH-Actions-Testing/compare/v1.1.0...v1.1.1) (2025-11-25)
+
+
+### Bug Fixes
+
+* enhance migration drift check to provide error feedback ([9d2a7a9](https://github.com/jkkicks/GH-Actions-Testing/commit/9d2a7a9db2379fad01745de97fc655d2a1e31613))
+* update image name setting to use github.repository variable ([624bb56](https://github.com/jkkicks/GH-Actions-Testing/commit/624bb56d4844cc7fa4170965f1962462dd51e64f))
+
 ## [1.1.0](https://github.com/jkkicks/GH-Actions-Testing/compare/v1.0.0...v1.1.0) (2025-11-25)
 
 
