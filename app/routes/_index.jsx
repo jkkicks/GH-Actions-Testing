@@ -1,8 +1,11 @@
 export default function Index() {
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-      <h1>Hello World!</h1>
-      <p>Welcome to Remix.</p>
+    <div className="hero">
+      <h1>Hello World</h1>
+      <p>Welcome to my testing workflow.</p>
+      <a href="https://remix.run/docs" className="cta-button">
+        Get Started
+      </a>
     </div>
   );
 }
