@@ -209,6 +209,15 @@ CI-CD Example                # Original plan document
 
 ## GitHub Repository Configuration
 
+### Actions Permissions (Settings > Actions > General)
+
+**Required settings under "Workflow permissions":**
+
+| Setting | Required Value | Why |
+|---------|---------------|-----|
+| **Workflow permissions** | "Read and write permissions" | Allows `GITHUB_TOKEN` to create releases, tags, and push commits |
+| **Allow GitHub Actions to create and approve pull requests** | ✅ Enabled | Required for Release Please to open PRs |
+
 ### Environments (Settings > Environments)
 
 #### Staging Environment
