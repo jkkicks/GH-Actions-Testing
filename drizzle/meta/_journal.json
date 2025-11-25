@@ -8,6 +8,13 @@
       "when": 1764043158793,
       "tag": "0000_smart_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1764060943516,
+      "tag": "0001_lying_devos",
+      "breakpoints": true
     }
   ]
 }
