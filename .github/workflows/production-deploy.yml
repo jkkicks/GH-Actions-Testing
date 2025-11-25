@@ -6,7 +6,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   promote-image:
@@ -18,8 +17,13 @@ jobs:
 
     outputs:
       version_tag: ${{ steps.version.outputs.tag }}
+      image_name: ${{ steps.image-name.outputs.name }}
 
     steps:
+      - name: Set image name to lowercase
+        id: image-name
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
       - name: Get version from release tag
         id: version
         run: |
@@ -36,21 +40,21 @@ jobs:
       - name: Pull latest staging image and retag for production
         run: |
           # Pull the latest image (which was deployed to staging)
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker pull ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}:latest
 
           # Tag it with the release version
-          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
+          docker tag ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}:latest \
+            ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}:${{ steps.version.outputs.tag }}
 
           # Push the version-tagged image
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
+          docker push ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}:${{ steps.version.outputs.tag }}
 
       - name: Generate summary
         run: |
           echo "## Production Image Promoted" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}:${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
 
   deploy-production:
     name: Deploy to Production
@@ -66,7 +70,7 @@ jobs:
           echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ needs.promote-image.outputs.version_tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.promote-image.outputs.version_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ env.REGISTRY }}/${{ needs.promote-image.outputs.image_name }}:${{ needs.promote-image.outputs.version_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Ready for DOCO-CD to pick up the new image tag." >> $GITHUB_STEP_SUMMARY
 

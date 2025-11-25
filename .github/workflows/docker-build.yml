@@ -14,7 +14,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push:
@@ -27,10 +26,15 @@ jobs:
     outputs:
       image_tag: ${{ steps.meta.outputs.tags }}
       sha_tag: sha-${{ github.sha }}
+      image_name: ${{ steps.image-name.outputs.name }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set image name to lowercase
+        id: image-name
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -46,7 +50,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}
           tags: |
             type=raw,value=latest
             type=sha
@@ -92,7 +96,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest'
+          image-ref: '${{ env.REGISTRY }}/${{ needs.build-and-push.outputs.image_name }}:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -117,7 +121,7 @@ jobs:
         run: |
           echo "## Staging Deployment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.sha_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "Image: ${{ env.REGISTRY }}/${{ needs.build-and-push.outputs.image_name }}:${{ needs.build-and-push.outputs.sha_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Ready for DOCO-CD to pick up the new image tag." >> $GITHUB_STEP_SUMMARY
 
@@ -139,7 +143,7 @@ jobs:
         run: |
           echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ env.REGISTRY }}/${{ needs.build-and-push.outputs.image_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
           echo "- latest" >> $GITHUB_STEP_SUMMARY
