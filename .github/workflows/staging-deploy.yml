@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Staging Deploy
 
 on:
   push:
@@ -16,8 +16,8 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-and-push:
-    name: Build & Push
+  build:
+    name: Build & Push Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,9 +34,7 @@ jobs:
 
       - name: Set image name to lowercase
         id: image-name
-        run: |
-          REPO="${{ github.repository }}"
-          echo "name=${REPO,,}" >> $GITHUB_OUTPUT
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -78,9 +76,9 @@ jobs:
             https://api.github.com/user/packages/container/$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')/visibility \
             -d '{"visibility":"public"}' || true
 
-  security-scan:
-    name: Security Scan (Image)
-    needs: build-and-push
+  scan:
+    name: Security Scan
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -98,7 +96,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ env.REGISTRY }}/${{ needs.build-and-push.outputs.image_name }}:latest'
+          image-ref: '${{ env.REGISTRY }}/${{ needs.build.outputs.image_name }}:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -110,9 +108,9 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
-  deploy-staging:
+  deploy:
     name: Deploy to Staging
-    needs: [build-and-push, security-scan]
+    needs: [build, scan]
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -123,7 +121,7 @@ jobs:
         run: |
           echo "## Staging Deployment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Image: ${{ env.REGISTRY }}/${{ needs.build-and-push.outputs.image_name }}:${{ needs.build-and-push.outputs.sha_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "Image: ${{ env.REGISTRY }}/${{ needs.build.outputs.image_name }}:${{ needs.build.outputs.sha_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Ready for DOCO-CD to pick up the new image tag." >> $GITHUB_STEP_SUMMARY
 
@@ -132,24 +130,24 @@ jobs:
       - name: Placeholder - Update infra repo
         run: |
           echo "In production, this step would update staging/docker-compose.yml in the infra repo"
-          echo "with the new image tag: ${{ needs.build-and-push.outputs.sha_tag }}"
+          echo "with the new image tag: ${{ needs.build.outputs.sha_tag }}"
 
   summary:
-    name: Build Summary
-    needs: [build-and-push, security-scan, deploy-staging]
+    name: Summary
+    needs: [build, scan, deploy]
     runs-on: ubuntu-latest
     if: always()
 
     steps:
       - name: Generate summary
         run: |
-          echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Staging Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** ${{ env.REGISTRY }}/${{ needs.build-and-push.outputs.image_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ env.REGISTRY }}/${{ needs.build.outputs.image_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
           echo "- latest" >> $GITHUB_STEP_SUMMARY
-          echo "- ${{ needs.build-and-push.outputs.sha_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ${{ needs.build.outputs.sha_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Security Scan:** Completed" >> $GITHUB_STEP_SUMMARY
-          echo "**Staging Deploy:** ${{ needs.deploy-staging.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Security Scan:** ${{ needs.scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deploy:** ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
