@@ -5,3 +5,4 @@ build
 .env.local
 .vscode
 package_copy.json
+.vscode/
