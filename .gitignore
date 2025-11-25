@@ -3,4 +3,5 @@ build
 .cache
 .env
 .env.local
+.vscode
 package_copy.json
