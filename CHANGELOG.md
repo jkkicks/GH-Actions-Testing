@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/jkkicks/GH-Actions-Testing/compare/v1.2.0...v1.3.0) (2025-11-25)
+
+
+### Features
+
+* update .gitignore to include .vscode directory ([a4c0ca2](https://github.com/jkkicks/GH-Actions-Testing/commit/a4c0ca28c644391c14eba686c1f45edfe01390db))
+
 ## [1.2.0](https://github.com/jkkicks/GH-Actions-Testing/compare/v1.1.1...v1.2.0) (2025-11-25)
 
 
