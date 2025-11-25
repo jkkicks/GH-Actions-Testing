@@ -218,6 +218,24 @@ CI-CD Example                # Original plan document
 | **Workflow permissions** | "Read and write permissions" | Allows `GITHUB_TOKEN` to create releases, tags, and push commits |
 | **Allow GitHub Actions to create and approve pull requests** | ✅ Enabled | Required for Release Please to open PRs |
 
+### Repository Secrets (Settings > Secrets and variables > Actions)
+
+| Secret | Required | How to Create |
+|--------|----------|---------------|
+| **RELEASE_TOKEN** | Yes | Fine-grained PAT with `Contents: Read and write`, `Pull requests: Read and write`, `Metadata: Read` permissions for this repo |
+
+**Why needed:** `GITHUB_TOKEN` has limited permissions for creating releases. A Personal Access Token is required for Release Please to create releases and tags.
+
+### General Settings (Settings > General)
+
+**Under "Pull Requests":**
+
+| Setting | Recommendation |
+|---------|---------------|
+| **Automatically delete head branches** | ✅ Enable |
+
+Can also be set via CLI: `gh repo edit --delete-branch-on-merge`
+
 ### Environments (Settings > Environments)
 
 #### Staging Environment
@@ -234,9 +252,15 @@ CI-CD Example                # Original plan document
 | **Environment secrets** | Usually not needed | Runtime secrets are managed by Ansible on the host, not GitHub Actions |
 | **Environment variables** | Usually not needed | Config is in infra repo docker-compose files |
 
-#### Production Environment (when ready)
+#### Production Environment
 
-**Status:** ❌ Not created
+**Status:** ✅ Created
+
+**Required Settings:**
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| **Deployment branches and tags** | "All branches" OR add tag rule `v*` | Production deploys from release tags (e.g., `v1.1.0`), not branches |
 
 **Recommended Settings:**
 
@@ -244,8 +268,9 @@ CI-CD Example                # Original plan document
 |---------|---------------|-----|
 | **Required reviewers** | 1-2 reviewers | Human approval before prod deploy |
 | **Wait timer** | Optional (5-15 min) | Cool-down period to catch issues |
-| **Deployment branches** | `main` only | Only deploy tested code |
-| **Environment secrets** | Required | Production credentials |
+| **Environment secrets** | Add if needed | Production credentials |
+
+**Important:** If you only allow `main` branch, production deploys will fail because releases are triggered from tags like `v1.1.0`, not from the `main` branch.
 
 ### Branch Protection (Settings > Branches)
 
