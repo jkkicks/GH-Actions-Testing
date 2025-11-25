@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/jkkicks/GH-Actions-Testing/compare/v1.0.0...v1.1.0) (2025-11-25)
+
+
+### Features
+
+* add Vite environment type definitions ([64c86f9](https://github.com/jkkicks/GH-Actions-Testing/commit/64c86f9870756f707f6a416402afeb156b56f95b))
+
+
+### Bug Fixes
+
+* add missing token configuration for Release Please action ([d1a4575](https://github.com/jkkicks/GH-Actions-Testing/commit/d1a45758cfaeb16cc2195161b16afc3e2fa50522))
+
 ## 1.0.0 (2025-11-25)
 
 
